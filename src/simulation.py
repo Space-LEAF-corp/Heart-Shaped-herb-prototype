@@ -1,4 +1,3 @@
-import math
 import random
 
 # ---- Parameters ----
@@ -33,21 +32,27 @@ def effective_env(t_year: int) -> float:
     shield = max(0.0, FLEXIUM_INITIAL - FLEXIUM_DECAY * t_year)
     return raw * (1.0 - shield)
 
-def degree(graph, node):
+from typing import Dict, Set, Any
+
+def degree(graph: Dict[Any, Set[Any]], node: Any) -> int:
     return len(graph.get(node, set()))
 
-def neighbors(graph, node):
+from typing import Dict, Set, Any
+def neighbors(graph: Dict[Any, Set[Any]], node: Any) -> Set[Any]:
     return graph.get(node, set())
 
-def is_edge_node(node):
+from typing import Any
+def is_edge_node(node: Any) -> bool:
     kind = classify_node(node)
     return kind in ("SSB", "STICKY")
 
-def step_year(graph):
-    to_remove_edges = []
-    to_remove_nodes = set()
+from typing import Dict, Set, Any
+def step_year(graph: Dict[Any, Set[Any]]):
+    global _step_year_t
+    to_remove_edges: list[tuple[Any, Any]] = []
+    to_remove_nodes: Set[Any] = set()
     deg = {n: degree(graph, n) for n in graph.keys()}
-    env_load = effective_env(step_year.t)
+    env_load = effective_env(_step_year_t)
 
     for n in list(graph.keys()):
         kind = classify_node(n)
@@ -88,16 +93,27 @@ def step_year(graph):
             graph[m].discard(n)
         graph.pop(n, None)
 
-    step_year.t += 1
+    _step_year_t += 1
 
-step_year.t = 0
+_step_year_t = 0
 
-def simulate_100_years(graph, cohesion_fn, seed=7):
+from typing import Dict, Set, Any, Callable, Tuple, List
+
+def simulate_100_years(
+    graph: Dict[Any, Set[Any]],
+    cohesion_fn: Callable[[Dict[Any, Set[Any]]], Tuple[float, Dict[str, Any]]],
+    seed: int = 7
+) -> list[tuple[float, dict[str, Any]]]:
+    global _step_year_t
+    _step_year_t = 0
     random.seed(seed)
-    history = []
-    for _ in range(100):
+    history: List[Tuple[float, Dict[str, Any]]] = []
+    for i in range(100):
         step_year(graph)
+        score: float  # type: ignore
+        stats: Dict[str, Any]  # type: ignore
         score, stats = cohesion_fn(graph)
-        stats["flexium_effectiveness"] = round(max(0.0, FLEXIUM_INITIAL - FLEXIUM_DECAY * step_year.t), 3)
+        # Use i+1 as the current year after step_year
+        stats["flexium_effectiveness"] = round(max(0.0, FLEXIUM_INITIAL - FLEXIUM_DECAY * (i+1)), 3)
         history.append((score, stats))
     return history
